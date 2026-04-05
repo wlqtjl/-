@@ -16,6 +16,7 @@ func SecureHeaders(next http.Handler) http.Handler {
 				"font-src 'self' https://fonts.gstatic.com; "+
 				"img-src 'self' data:; "+
 				"connect-src 'self'; "+
+				"worker-src 'self'; "+
 				"frame-src 'none'; "+
 				"object-src 'none'; "+
 				"base-uri 'self'; "+
