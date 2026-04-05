@@ -141,6 +141,42 @@ func TestChat_WithDeepSeekProvider(t *testing.T) {
 	}
 }
 
+func TestChat_WithZhipuProvider(t *testing.T) {
+	// Mock Zhipu HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer zhipu-test-key" {
+			t.Error("missing or wrong auth header")
+		}
+		json.NewEncoder(w).Encode(dsResponse{
+			Choices: []struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+			}{{Message: struct {
+				Content string `json:"content"`
+			}{Content: "智谱回复"}}},
+		})
+	}))
+	defer server.Close()
+
+	soulRepo := newMockSoulRepo()
+	soulRepo.souls[1] = &model.Soul{ID: 1, UserID: 10, Name: "爸爸"}
+	msgRepo := newMockMsgRepo()
+
+	provider := NewZhipuProvider(server.URL, "zhipu-test-key")
+	providers := map[string]AIProvider{"zhipu": provider}
+
+	svc := NewChatService(msgRepo, soulRepo, providers, "zhipu", false)
+
+	reply, _, _, err := svc.Chat(context.Background(), 10, 1, "你好")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reply != "智谱回复" {
+		t.Errorf("reply = %q, want %q", reply, "智谱回复")
+	}
+}
+
 func TestChat_SoulNotFound(t *testing.T) {
 	soulRepo := newMockSoulRepo()
 	msgRepo := newMockMsgRepo()

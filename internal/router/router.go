@@ -58,6 +58,9 @@ func New(db *sql.DB, cfg *config.Config) chi.Router {
 	if cfg.OpenAIAPIKey != "" {
 		providers["openai"] = service.NewOpenAIProvider(cfg.OpenAIURL, cfg.OpenAIAPIKey, "")
 	}
+	if cfg.ZhipuAPIKey != "" {
+		providers["zhipu"] = service.NewZhipuProvider(cfg.ZhipuURL, cfg.ZhipuAPIKey)
+	}
 
 	chatSvc := service.NewChatService(msgRepo, soulRepo, providers, cfg.AIProvider, cfg.EnableSentiment)
 	soulSvc := service.NewSoulService(soulRepo, soulHistoryRepo)
