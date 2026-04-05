@@ -70,6 +70,10 @@ services:
       AI_PROVIDER: "${AI_PROVIDER:-deepseek}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       OPENAI_URL: "${OPENAI_URL:-https://api.openai.com/v1/chat/completions}"
+      ZHIPU_API_KEY: "${ZHIPU_API_KEY:-}"
+      ZHIPU_URL: "${ZHIPU_URL:-https://open.bigmodel.cn/api/paas/v4/chat/completions}"
+      GEMMA_API_KEY: "${GEMMA_API_KEY:-}"
+      GEMMA_URL: "${GEMMA_URL:-https://generativelanguage.googleapis.com/v1beta/openai/chat/completions}"
       ENABLE_SENTIMENT: "${ENABLE_SENTIMENT:-false}"
       # Go 运行时内存限制
       GOMEMLIMIT: "50MiB"
