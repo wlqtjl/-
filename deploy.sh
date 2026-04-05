@@ -93,9 +93,9 @@ install_docker() {
     if command -v dnf &>/dev/null; then
       PKG_MGR="dnf"
     fi
-    $PKG_MGR install -y -q yum-utils >/dev/null 2>&1 || true
+    $PKG_MGR install -y -q yum-utils >/dev/null 2>&1 || warn "yum-utils 安装失败，将尝试手动添加 repo"
     # 使用 CentOS repo（兼容所有 RHEL 系发行版，包括 OpenCloudOS）
-    $PKG_MGR config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
+    dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
       || yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
       || {
         # 手动添加 repo 文件（兼容无 config-manager 的系统）
