@@ -209,7 +209,7 @@ REPOEOF
 
     # 预导入 GPG 密钥，避免 dnf install 时交互式确认提示
     info "导入 Docker GPG 密钥..."
-    if ! rpm --import "${DOCKER_MIRROR}/gpg" 2>&1; then
+    if ! rpm --import "${DOCKER_MIRROR}/gpg" >/dev/null 2>&1; then
       warn "GPG 密钥导入失败（可能是网络问题），继续安装（-y 会自动接受）"
     fi
 
