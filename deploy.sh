@@ -6,6 +6,7 @@
 #   curl -sSL https://raw.githubusercontent.com/wlqtjl/-/main/deploy.sh | bash
 #   或:
 #   git clone https://github.com/wlqtjl/- wozai && cd wozai && bash deploy.sh
+#   国内 VPS 加速: git clone https://ghfast.top/https://github.com/wlqtjl/- wozai && cd wozai && bash deploy.sh
 #
 # 支持:
 #   - Docker 容器一键部署 (自动安装 Docker)

@@ -220,6 +220,9 @@ systemctl enable docker
 git clone https://github.com/wlqtjl/- wozai
 cd wozai
 
+# ⚠️ 如果 clone 很慢或超时（国内 VPS 常见），使用 GitHub 加速镜像：
+# git clone https://ghfast.top/https://github.com/wlqtjl/- wozai
+
 # 2. 一键部署
 sudo bash deploy.sh
 # 选择选项 1: Docker 容器部署

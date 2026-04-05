@@ -40,6 +40,9 @@
 git clone https://github.com/wlqtjl/- wozai
 cd wozai
 
+# ⚠️ 国内 VPS clone 很慢？使用加速镜像：
+# git clone https://ghfast.top/https://github.com/wlqtjl/- wozai && cd wozai
+
 # 2. 一键部署 (自动安装 Docker + 构建 + 启动)
 sudo bash deploy.sh
 
