@@ -174,6 +174,45 @@ systemctl start docker
 systemctl enable docker
 ```
 
+> **⚠️ OpenCloudOS / TencentOS 或国内 VPS 安装 Docker 报错？**
+>
+> 如果 `get.docker.com` 或 `download.docker.com` 超时/连接重置，是因为国内网络无法直连 Docker 官方源。
+> 请改用国内镜像手动安装：
+>
+> ```bash
+> # 1. 清理之前失败的 repo
+> rm -f /etc/yum.repos.d/docker-ce.repo
+>
+> # 2. 添加阿里云 Docker 镜像源
+> cat > /etc/yum.repos.d/docker-ce.repo <<'EOF'
+> [docker-ce-stable]
+> name=Docker CE Stable - $basearch
+> baseurl=https://mirrors.aliyun.com/docker-ce/linux/centos/9/$basearch/stable
+> enabled=1
+> gpgcheck=1
+> gpgkey=https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+> EOF
+>
+> # 3. 安装
+> dnf makecache && dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+>
+> # 4. 配置镜像加速 + 启动
+> mkdir -p /etc/docker
+> cat > /etc/docker/daemon.json <<'EOF'
+> {
+>   "registry-mirrors": ["https://mirror.ccs.tencentyun.com"],
+>   "log-driver": "json-file",
+>   "log-opts": {"max-size": "5m", "max-file": "2"}
+> }
+> EOF
+> systemctl start docker && systemctl enable docker
+> ```
+>
+> 或者直接使用项目的 `deploy.sh`，它已自动适配国内镜像源：
+> ```bash
+> sudo bash deploy.sh docker
+> ```
+
 ### 第 5 步：拉取代码并部署
 
 ```bash

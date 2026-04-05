@@ -93,23 +93,46 @@ install_docker() {
     if command -v dnf &>/dev/null; then
       PKG_MGR="dnf"
     fi
-    $PKG_MGR install -y -q yum-utils >/dev/null 2>&1 || warn "yum-utils 安装失败，将尝试手动添加 repo"
-    # 使用 CentOS repo（兼容所有 RHEL 系发行版，包括 OpenCloudOS）
-    dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
-      || yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
-      || {
-        # 手动添加 repo 文件（兼容无 config-manager 的系统）
-        cat > /etc/yum.repos.d/docker-ce.repo <<'REPOEOF'
+    $PKG_MGR install -y -q yum-utils >/dev/null 2>&1 || true
+
+    # 检测 download.docker.com 是否可达（国内 VPS 常被墙）
+    local DOCKER_MIRROR=""
+    if curl -fsSL --connect-timeout 5 https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
+      DOCKER_MIRROR="https://download.docker.com/linux/centos"
+    else
+      warn "download.docker.com 不可达，尝试国内镜像..."
+      if curl -fsSL --connect-timeout 5 https://mirrors.aliyun.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
+        DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/centos"
+        info "使用阿里云镜像"
+      elif curl -fsSL --connect-timeout 5 https://mirrors.cloud.tencent.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
+        DOCKER_MIRROR="https://mirrors.cloud.tencent.com/docker-ce/linux/centos"
+        info "使用腾讯云镜像"
+      else
+        DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/centos"
+        warn "镜像探测均超时，默认使用阿里云镜像"
+      fi
+    fi
+
+    # 获取 CentOS 兼容版本号（OpenCloudOS 9 → centos 9）
+    local RELEASEVER
+    RELEASEVER=$(rpm -E %{rhel} 2>/dev/null || echo "9")
+    if [[ "$RELEASEVER" == "%{rhel}" ]] || [[ -z "$RELEASEVER" ]]; then
+      RELEASEVER="9"
+    fi
+
+    # 写入 repo 文件（兼容所有 RHEL 系发行版，包括 OpenCloudOS）
+    cat > /etc/yum.repos.d/docker-ce.repo <<REPOEOF
 [docker-ce-stable]
-name=Docker CE Stable
-baseurl=https://download.docker.com/linux/centos/$releasever/$basearch/stable
+name=Docker CE Stable - \$basearch
+baseurl=${DOCKER_MIRROR}/${RELEASEVER}/\$basearch/stable
 enabled=1
 gpgcheck=1
-gpgkey=https://download.docker.com/linux/centos/gpg
+gpgkey=${DOCKER_MIRROR}/gpg
 REPOEOF
-        info "已手动添加 Docker CE repo"
-      }
-    $PKG_MGR install -y -q docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1
+    info "已添加 Docker CE repo (版本: ${RELEASEVER})"
+
+    $PKG_MGR makecache 2>/dev/null || true
+    $PKG_MGR install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   else
     # 通用安装脚本
     curl -fsSL https://get.docker.com | sh
@@ -185,11 +208,18 @@ deploy_docker() {
 
   cd "$PROJECT_DIR"
 
-  # 优化 Docker daemon 配置用于低内存
+  # 优化 Docker daemon 配置用于低内存 + 国内镜像加速
   if [[ ! -f /etc/docker/daemon.json ]]; then
     mkdir -p /etc/docker
-    cat > /etc/docker/daemon.json <<'DJSON'
+    # 检测是否为国内网络环境（download.docker.com 不可达则判定为国内）
+    local MIRROR_CONFIG=""
+    if ! curl -fsSL --connect-timeout 3 https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
+      MIRROR_CONFIG='"registry-mirrors": ["https://mirror.ccs.tencentyun.com", "https://docker.mirrors.ustc.edu.cn"],'
+      info "检测到国内网络，已配置 Docker 镜像加速"
+    fi
+    cat > /etc/docker/daemon.json <<DJSON
 {
+  ${MIRROR_CONFIG}
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "5m",

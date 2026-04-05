@@ -617,7 +617,9 @@ docker compose exec db pg_dump -U wozai wozai | gzip > wozai_backup_$(date +%Y%m
 
 | 现象 | 可能原因 | 解决方式 |
 |------|----------|----------|
-| `docker: command not found` (OpenCloudOS) | `get.docker.com` 不支持 OpenCloudOS | 使用 `bash deploy.sh` 自动安装（已适配），或手动：`yum install -y yum-utils && yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin && systemctl start docker && systemctl enable docker` |
+| `docker: command not found` (OpenCloudOS) | `get.docker.com` 不支持 OpenCloudOS | 使用 `sudo bash deploy.sh docker` 自动安装（已适配国内镜像），见下方详细说明 |
+| Docker 安装时 `SSL connect error` / `Connection reset` | 国内 VPS 无法访问 `download.docker.com` | 改用国内镜像源，见下方详细说明 |
+| `No match for argument: yum-utils` (OpenCloudOS) | OpenCloudOS 无此包 | 可忽略，直接手动添加 repo 文件即可安装 Docker |
 | 启动失败 `config: DATABASE_URL is required` | .env 未配置 | 检查 `/opt/wozai/.env` |
 | 启动失败 `db ping: dial error` | PostgreSQL 未启动或密码错 | `sudo systemctl start postgresql` 或检查密码 |
 | 注册时提示 `服务异常` | 数据库表未创建 | 程序首次启动会自动迁移，检查日志 |
@@ -625,6 +627,44 @@ docker compose exec db pg_dump -U wozai wozai | gzip > wozai_backup_$(date +%Y%m
 | 语音生成失败 | SiliconFlow API Key 无效 | 检查 `SILICONFLOW_API_KEY` |
 | 访问 80 端口无响应 | Nginx 未启动 | `sudo systemctl start nginx` |
 | 429 Too Many Requests | 触发限流 | 正常安全机制，等待几秒后重试 |
+
+#### 国内 VPS 安装 Docker 详细步骤（OpenCloudOS / TencentOS）
+
+如果 `download.docker.com` 超时或被重置，使用以下命令（阿里云镜像源）：
+
+```bash
+# 清理之前失败的 repo
+rm -f /etc/yum.repos.d/docker-ce.repo
+
+# 添加阿里云 Docker 镜像源
+cat > /etc/yum.repos.d/docker-ce.repo <<'EOF'
+[docker-ce-stable]
+name=Docker CE Stable - $basearch
+baseurl=https://mirrors.aliyun.com/docker-ce/linux/centos/9/$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+EOF
+
+# 安装 Docker
+dnf makecache
+dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# 配置镜像加速 + 启动
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'EOF'
+{
+  "registry-mirrors": ["https://mirror.ccs.tencentyun.com", "https://docker.mirrors.ustc.edu.cn"],
+  "log-driver": "json-file",
+  "log-opts": {"max-size": "5m", "max-file": "2"}
+}
+EOF
+systemctl start docker && systemctl enable docker
+docker --version
+```
+
+> 项目的 `deploy.sh` 已自动适配：检测到 `download.docker.com` 不可达时会自动切换到阿里云/腾讯云镜像。
+> 直接执行 `sudo bash deploy.sh docker` 即可。
 
 ### 日志排查
 
