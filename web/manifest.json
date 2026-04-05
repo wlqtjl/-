@@ -1,0 +1,19 @@
+{
+  "name": "我在 · 数字生命",
+  "short_name": "我在",
+  "description": "WoZai Digital Soul - 让爱继续在",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f2ea",
+  "theme_color": "#c4853a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23c4853a' stroke='%23e8b876' stroke-width='3'/><text x='50' y='62' font-size='40' text-anchor='middle' fill='white' font-family='serif'>在</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["lifestyle", "social"],
+  "lang": "zh-CN"
+}

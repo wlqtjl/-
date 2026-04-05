@@ -36,6 +36,10 @@ services:
       SILICONFLOW_URL: "${SILICONFLOW_URL:-https://api.siliconflow.cn/v1/audio/speech}"
       ACCESS_TOKEN_TTL: "${ACCESS_TOKEN_TTL:-15}"
       REFRESH_TOKEN_TTL: "${REFRESH_TOKEN_TTL:-168}"
+      AI_PROVIDER: "${AI_PROVIDER:-deepseek}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_URL: "${OPENAI_URL:-https://api.openai.com/v1/chat/completions}"
+      ENABLE_SENTIMENT: "${ENABLE_SENTIMENT:-false}"
 
 volumes:
   pgdata:

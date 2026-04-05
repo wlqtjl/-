@@ -1,0 +1,91 @@
+# docker-compose.lowmem.yml
+# 专为 700MB 内存 VPS 优化的部署配置
+# 使用方式: docker compose -f docker-compose.lowmem.yml up -d
+#
+# 内存预算 (总计 ~700MB):
+#   - 系统/Docker 开销:  ~120MB
+#   - PostgreSQL:         ~80MB  (shared_buffers=32MB)
+#   - WoZai App:          ~30MB  (Go 二进制 + 内嵌前端)
+#   - 空闲缓冲:          ~470MB (留给 OS 文件缓存 & 突发)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wozai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: wozai
+    # 低内存 PostgreSQL 调优
+    command: >
+      postgres
+        -c shared_buffers=32MB
+        -c effective_cache_size=128MB
+        -c work_mem=2MB
+        -c maintenance_work_mem=16MB
+        -c max_connections=20
+        -c wal_buffers=1MB
+        -c checkpoint_completion_target=0.9
+        -c random_page_cost=1.1
+        -c log_min_duration_statement=1000
+        -c idle_in_transaction_session_timeout=30000
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wozai"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    # 不暴露端口到宿主机（仅内部通信）
+    # ports:
+    #   - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${LISTEN_PORT:-80}:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://wozai:${POSTGRES_PASSWORD:-changeme}@db:5432/wozai?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}"
+      DEEPSEEK_URL: "${DEEPSEEK_URL:-https://api.deepseek.com/v1/chat/completions}"
+      SILICONFLOW_API_KEY: "${SILICONFLOW_API_KEY}"
+      SILICONFLOW_URL: "${SILICONFLOW_URL:-https://api.siliconflow.cn/v1/audio/speech}"
+      ACCESS_TOKEN_TTL: "${ACCESS_TOKEN_TTL:-15}"
+      REFRESH_TOKEN_TTL: "${REFRESH_TOKEN_TTL:-168}"
+      AI_PROVIDER: "${AI_PROVIDER:-deepseek}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_URL: "${OPENAI_URL:-https://api.openai.com/v1/chat/completions}"
+      ENABLE_SENTIMENT: "${ENABLE_SENTIMENT:-false}"
+      # Go 运行时内存限制
+      GOMEMLIMIT: "50MiB"
+      GOGC: "50"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  pgdata:
