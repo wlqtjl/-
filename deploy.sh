@@ -115,8 +115,12 @@ install_docker() {
 
     # 获取 CentOS 兼容版本号（OpenCloudOS 9 → centos 9）
     local RELEASEVER
-    RELEASEVER=$(rpm -E %{rhel} 2>/dev/null || echo "9")
-    if [[ "$RELEASEVER" == "%{rhel}" ]] || [[ -z "$RELEASEVER" ]]; then
+    RELEASEVER=$(rpm -E %{rhel} 2>/dev/null || echo "")
+    if [[ -z "$RELEASEVER" ]] || [[ "$RELEASEVER" == "%{rhel}" ]]; then
+      # 从 /etc/os-release 的 VERSION_ID 提取主版本号
+      RELEASEVER=$(. /etc/os-release 2>/dev/null && echo "${VERSION_ID%%.*}")
+    fi
+    if [[ -z "$RELEASEVER" ]] || ! [[ "$RELEASEVER" =~ ^[0-9]+$ ]]; then
       RELEASEVER="9"
     fi
 
@@ -211,15 +215,12 @@ deploy_docker() {
   # 优化 Docker daemon 配置用于低内存 + 国内镜像加速
   if [[ ! -f /etc/docker/daemon.json ]]; then
     mkdir -p /etc/docker
-    # 检测是否为国内网络环境（download.docker.com 不可达则判定为国内）
-    local MIRROR_CONFIG=""
-    if ! curl -fsSL --connect-timeout 3 https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
-      MIRROR_CONFIG='"registry-mirrors": ["https://mirror.ccs.tencentyun.com", "https://docker.mirrors.ustc.edu.cn"],'
+    # 检测是否为国内网络环境（Docker Hub 不可达则判定为国内）
+    if ! curl -fsSL --connect-timeout 3 https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
       info "检测到国内网络，已配置 Docker 镜像加速"
-    fi
-    cat > /etc/docker/daemon.json <<DJSON
+      cat > /etc/docker/daemon.json <<'DJSON'
 {
-  ${MIRROR_CONFIG}
+  "registry-mirrors": ["https://mirror.ccs.tencentyun.com", "https://docker.mirrors.ustc.edu.cn"],
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "5m",
@@ -228,6 +229,18 @@ deploy_docker() {
   "storage-driver": "overlay2"
 }
 DJSON
+    else
+      cat > /etc/docker/daemon.json <<'DJSON'
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "5m",
+    "max-file": "2"
+  },
+  "storage-driver": "overlay2"
+}
+DJSON
+    fi
     systemctl restart docker 2>/dev/null || true
     log "Docker daemon 已优化 (日志限制 5MB)"
   fi
