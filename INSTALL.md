@@ -120,7 +120,7 @@ docker compose -f docker-compose.lowmem.yml exec db pg_dump -U wozai wozai | gzi
 
 | 项目       | 要求                          |
 |------------|-------------------------------|
-| 操作系统   | Ubuntu 20.04+ / Debian 11+ / CentOS 8+ / Rocky Linux 8+ |
+| 操作系统   | Ubuntu 20.04+ / Debian 11+ / CentOS 8+ / Rocky Linux 8+ / OpenCloudOS / TencentOS |
 | CPU        | 1 核                          |
 | 内存       | **512 MB** (使用 lowmem 配置)  |
 | 磁盘       | 5 GB                          |
@@ -617,6 +617,7 @@ docker compose exec db pg_dump -U wozai wozai | gzip > wozai_backup_$(date +%Y%m
 
 | 现象 | 可能原因 | 解决方式 |
 |------|----------|----------|
+| `docker: command not found` (OpenCloudOS) | `get.docker.com` 不支持 OpenCloudOS | 使用 `bash deploy.sh` 自动安装（已适配），或手动：`yum install -y yum-utils && yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin && systemctl start docker && systemctl enable docker` |
 | 启动失败 `config: DATABASE_URL is required` | .env 未配置 | 检查 `/opt/wozai/.env` |
 | 启动失败 `db ping: dial error` | PostgreSQL 未启动或密码错 | `sudo systemctl start postgresql` 或检查密码 |
 | 注册时提示 `服务异常` | 数据库表未创建 | 程序首次启动会自动迁移，检查日志 |

@@ -87,10 +87,29 @@ install_docker() {
 
     apt-get update -qq
     apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1
-  elif command -v yum &>/dev/null; then
-    yum install -y -q yum-utils >/dev/null 2>&1
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1
-    yum install -y -q docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1
+  elif command -v dnf &>/dev/null || command -v yum &>/dev/null; then
+    # RHEL 兼容系统：CentOS, Rocky Linux, AlmaLinux, OpenCloudOS, TencentOS 等
+    local PKG_MGR="yum"
+    if command -v dnf &>/dev/null; then
+      PKG_MGR="dnf"
+    fi
+    $PKG_MGR install -y -q yum-utils >/dev/null 2>&1 || true
+    # 使用 CentOS repo（兼容所有 RHEL 系发行版，包括 OpenCloudOS）
+    $PKG_MGR config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
+      || yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1 \
+      || {
+        # 手动添加 repo 文件（兼容无 config-manager 的系统）
+        cat > /etc/yum.repos.d/docker-ce.repo <<'REPOEOF'
+[docker-ce-stable]
+name=Docker CE Stable
+baseurl=https://download.docker.com/linux/centos/$releasever/$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+REPOEOF
+        info "已手动添加 Docker CE repo"
+      }
+    $PKG_MGR install -y -q docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1
   else
     # 通用安装脚本
     curl -fsSL https://get.docker.com | sh
