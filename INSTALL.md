@@ -2,31 +2,126 @@
 
 ## 目录
 
-1. [系统要求](#1-系统要求)
-2. [项目文件结构](#2-项目文件结构)
-3. [方式一：一键安装（推荐）](#3-方式一一键安装推荐)
-4. [方式二：Docker Compose 部署](#4-方式二docker-compose-部署)
-5. [方式三：手动安装](#5-方式三手动安装)
-6. [外部依赖 API 申请指南](#6-外部依赖-api-申请指南)
-7. [配置说明](#7-配置说明)
-8. [HTTPS / 域名配置](#8-https--域名配置)
-9. [运维操作](#9-运维操作)
-10. [数据备份与恢复](#10-数据备份与恢复)
-11. [故障排查](#11-故障排查)
-12. [架构说明](#12-架构说明)
+1. [🔥 700MB 小内存 VPS 一键部署](#0-700mb-小内存-vps-一键部署)
+2. [系统要求](#1-系统要求)
+3. [项目文件结构](#2-项目文件结构)
+4. [方式一：一键安装（推荐）](#3-方式一一键安装推荐)
+5. [方式二：Docker Compose 部署](#4-方式二docker-compose-部署)
+6. [方式三：手动安装](#5-方式三手动安装)
+7. [外部依赖 API 申请指南](#6-外部依赖-api-申请指南)
+8. [配置说明](#7-配置说明)
+9. [HTTPS / 域名配置](#8-https--域名配置)
+10. [运维操作](#9-运维操作)
+11. [数据备份与恢复](#10-数据备份与恢复)
+12. [故障排查](#11-故障排查)
+13. [架构说明](#12-架构说明)
+
+---
+
+## 0. 700MB 小内存 VPS 一键部署
+
+> 专为 **700MB 内存 VPS** 优化，整体运行时内存 < 200MB。
+
+### 内存预算
+
+| 组件             | 内存占用    | 说明                        |
+|-----------------|------------|----------------------------|
+| 系统 + Docker    | ~120MB     | Alpine Linux 容器极低开销    |
+| PostgreSQL       | ~80MB      | shared_buffers=32MB 调优    |
+| WoZai Go 应用    | ~30MB      | 静态二进制 + GOMEMLIMIT 限制 |
+| **合计**         | **~230MB** | 剩余 470MB 给系统缓存        |
+
+### 一键部署 (3 步)
+
+```bash
+# 1. 获取代码
+git clone https://github.com/wlqtjl/- wozai
+cd wozai
+
+# 2. 一键部署 (自动安装 Docker + 构建 + 启动)
+sudo bash deploy.sh
+
+# 3. 编辑配置填入 API 密钥
+nano .env
+# 修改 DEEPSEEK_API_KEY 和 SILICONFLOW_API_KEY
+# 然后重启:
+docker compose -f docker-compose.lowmem.yml restart
+```
+
+### 也可以直接命令行指定模式
+
+```bash
+# Docker 容器部署 (推荐)
+sudo bash deploy.sh docker
+
+# 裸机部署 (无 Docker，最省内存)
+sudo bash deploy.sh bare
+
+# 查看状态
+bash deploy.sh status
+```
+
+### 或使用 Make 命令
+
+```bash
+# Docker 一键部署
+make deploy
+
+# 查看日志
+make deploy-logs
+
+# 查看状态
+make deploy-status
+
+# 停止
+make deploy-down
+```
+
+### 常用运维命令
+
+```bash
+# 查看容器状态和内存
+docker compose -f docker-compose.lowmem.yml ps
+docker stats --no-stream
+
+# 查看日志
+docker compose -f docker-compose.lowmem.yml logs -f app
+
+# 重启
+docker compose -f docker-compose.lowmem.yml restart
+
+# 停止
+docker compose -f docker-compose.lowmem.yml down
+
+# 更新
+git pull
+docker compose -f docker-compose.lowmem.yml up -d --build
+
+# 备份数据库
+docker compose -f docker-compose.lowmem.yml exec db pg_dump -U wozai wozai | gzip > backup_$(date +%Y%m%d).sql.gz
+```
+
+### 关键优化点
+
+- **PostgreSQL**: `shared_buffers=32MB`, `work_mem=2MB`, `max_connections=20`
+- **Go 应用**: `GOMEMLIMIT=50MiB`, `GOGC=50` (更积极的 GC)
+- **Docker**: `memory limit 128MB` (PG) + `64MB` (App), 日志限制 5MB
+- **镜像**: Alpine 基础，运行镜像仅 ~15MB
+- **网络**: 不暴露 PostgreSQL 端口，仅内部通信
+- **健康检查**: 自动重启不健康容器
 
 ---
 
 ## 1. 系统要求
 
-### 最低配置
+### 最低配置 (700MB VPS ✓)
 
 | 项目       | 要求                          |
 |------------|-------------------------------|
 | 操作系统   | Ubuntu 20.04+ / Debian 11+ / CentOS 8+ / Rocky Linux 8+ |
 | CPU        | 1 核                          |
-| 内存       | 1 GB                          |
-| 磁盘       | 10 GB                         |
+| 内存       | **512 MB** (使用 lowmem 配置)  |
+| 磁盘       | 5 GB                          |
 | 网络       | 可访问 api.deepseek.com 和 api.siliconflow.cn |
 
 ### 推荐配置
