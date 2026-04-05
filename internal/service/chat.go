@@ -192,6 +192,69 @@ func (p *OpenAIProvider) ChatCompletion(ctx context.Context, messages []ChatMess
 	return dsResp.Choices[0].Message.Content, nil
 }
 
+// GemmaProvider implements AIProvider for Google Gemma via AI Studio (free).
+type GemmaProvider struct {
+	apiURL     string
+	apiKey     string
+	httpClient *http.Client
+}
+
+// NewGemmaProvider creates a Google Gemma AI provider.
+func NewGemmaProvider(apiURL, apiKey string) *GemmaProvider {
+	return &GemmaProvider{
+		apiURL: apiURL,
+		apiKey: apiKey,
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second,
+		},
+	}
+}
+
+func (p *GemmaProvider) Name() string { return "gemma" }
+
+func (p *GemmaProvider) ChatCompletion(ctx context.Context, messages []ChatMessage) (string, error) {
+	reqBody := dsRequest{
+		Model:           "gemma-3-27b-it",
+		Messages:        toDSMessages(messages),
+		MaxTokens:       300,
+		Temperature:     0.88,
+		PresencePenalty: 0.3,
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return "", fmt.Errorf("gemma status %d: %s", resp.StatusCode, string(b))
+	}
+
+	var dsResp dsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&dsResp); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	if len(dsResp.Choices) == 0 {
+		return "", fmt.Errorf("no choices in response")
+	}
+
+	return dsResp.Choices[0].Message.Content, nil
+}
+
 // ZhipuProvider implements AIProvider for Zhipu (ChatGLM) APIs.
 type ZhipuProvider struct {
 	apiURL     string

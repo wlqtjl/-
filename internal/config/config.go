@@ -20,11 +20,13 @@ type Config struct {
 	RefreshTokenTTL int // hours
 
 	// Multi-model AI support
-	AIProvider    string // "deepseek", "openai", "zhipu"
+	AIProvider    string // "deepseek", "openai", "zhipu", "gemma"
 	OpenAIAPIKey  string
 	OpenAIURL     string
 	ZhipuAPIKey   string
 	ZhipuURL      string
+	GemmaAPIKey   string
+	GemmaURL      string
 
 	// Sentiment analysis
 	EnableSentiment bool
@@ -49,6 +51,8 @@ func Load() (*Config, error) {
 		OpenAIURL:       envOrDefault("OPENAI_URL", "https://api.openai.com/v1/chat/completions"),
 		ZhipuAPIKey:     os.Getenv("ZHIPU_API_KEY"),
 		ZhipuURL:        envOrDefault("ZHIPU_URL", "https://open.bigmodel.cn/api/paas/v4/chat/completions"),
+		GemmaAPIKey:     os.Getenv("GEMMA_API_KEY"),
+		GemmaURL:        envOrDefault("GEMMA_URL", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"),
 		EnableSentiment: envOrDefault("ENABLE_SENTIMENT", "false") == "true",
 	}
 
