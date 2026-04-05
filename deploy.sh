@@ -324,7 +324,13 @@ DJSON
   fi
 
   info "构建并启动容器..."
-  docker compose -f docker-compose.lowmem.yml build --no-cache 2>&1 | tail -5
+  # 检测 Go 模块代理是否可达（国内 VPS 无法访问 proxy.golang.org）
+  local BUILD_ARGS=""
+  if ! curl -fsSL --connect-timeout "$CONNECT_TIMEOUT" https://proxy.golang.org >/dev/null 2>&1; then
+    info "proxy.golang.org 不可达，使用 goproxy.cn 加速 Go 模块下载"
+    BUILD_ARGS="--build-arg GOPROXY=https://goproxy.cn,direct"
+  fi
+  docker compose -f docker-compose.lowmem.yml build --no-cache $BUILD_ARGS 2>&1 | tail -5
   docker compose -f docker-compose.lowmem.yml up -d
 
   log "容器已启动"

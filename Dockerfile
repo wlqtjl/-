@@ -1,6 +1,10 @@
 # ---- Build Stage ----
 FROM golang:1.25-alpine AS builder
 
+# 支持国内 VPS 构建: docker build --build-arg GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=""
+ENV GOPROXY=${GOPROXY}
+
 RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /src
