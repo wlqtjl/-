@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>我在 · 数字生命</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Noto+Sans+SC:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div id="particles"></div>
+
+<!-- 首页 -->
+<div id="s-home" class="screen active">
+  <div class="logo-ring">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+  </div>
+  <h1 class="brand">我在</h1>
+  <p class="brand-sub">wozai · digital soul</p>
+  <p class="tagline">有些人离开了，<br>但<em>爱</em>从未消失。<br>让他们，继续<em>在</em>。</p>
+  <button class="btn-p" id="btn-start">开始</button>
+</div>
+
+<!-- 认证页 -->
+<div id="s-auth" class="screen">
+  <div class="logo-ring" style="margin-bottom:20px">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+  </div>
+  <div class="auth-box">
+    <h2>欢迎回来</h2>
+    <div class="div-line" style="margin:8px auto 22px"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">登录</button>
+      <button class="auth-tab" data-tab="register">注册</button>
+    </div>
+
+    <form id="form-login" class="auth-form active">
+      <div class="auth-fg">
+        <label>邮箱</label>
+        <input type="email" id="login-email" placeholder="your@email.com" required>
+      </div>
+      <div class="auth-fg">
+        <label>密码</label>
+        <input type="password" id="login-pass" placeholder="输入密码" required>
+      </div>
+      <div class="auth-err" id="login-err"></div>
+      <button type="submit" class="btn-p" style="width:100%">登录</button>
+    </form>
+
+    <form id="form-register" class="auth-form">
+      <div class="auth-fg">
+        <label>邮箱</label>
+        <input type="email" id="reg-email" placeholder="your@email.com" required>
+      </div>
+      <div class="auth-fg">
+        <label>昵称</label>
+        <input type="text" id="reg-nick" placeholder="你的名字" required>
+      </div>
+      <div class="auth-fg">
+        <label>密码</label>
+        <input type="password" id="reg-pass" placeholder="至少8位" required minlength="8">
+      </div>
+      <div class="auth-err" id="reg-err"></div>
+      <button type="submit" class="btn-p" style="width:100%">注册</button>
+    </form>
+
+    <button class="btn-g" style="width:100%;margin-top:6px" id="btn-auth-back">返回首页</button>
+  </div>
+</div>
+
+<!-- 列表页 -->
+<div id="s-list" class="screen">
+  <div class="page-w">
+    <div class="list-header">
+      <div class="ph" style="margin-bottom:0">
+        <h2>我的灵魂</h2>
+        <div class="div-line"></div>
+        <p>每一个数字灵魂，都是一份思念的容器</p>
+      </div>
+      <button class="btn-logout" id="btn-logout">退出</button>
+    </div>
+    <div id="soul-list"></div>
+    <button class="btn-p" style="width:100%;margin-top:6px" id="btn-to-create">+ 创建新的数字灵魂</button>
+  </div>
+</div>
+
+<!-- 创建页 -->
+<div id="s-create" class="screen">
+  <div class="page-w">
+    <div class="steps">
+      <div class="sdot on"></div>
+      <div class="sdot"></div>
+      <div class="sdot"></div>
+    </div>
+    <div class="ph">
+      <h2>为TA创造灵魂</h2>
+      <div class="div-line"></div>
+    </div>
+    <div class="guide-q">
+      <p>不需要完美。你记住的那个样子，就是最真实的TA。</p>
+    </div>
+    <form id="form-create">
+      <div class="fg">
+        <label class="form-label">TA 叫什么名字</label>
+        <input class="fi" id="f-name" placeholder="比如：爷爷、妈妈、小明…" required>
+      </div>
+      <div class="fg">
+        <label class="form-label">TA 与你的关系</label>
+        <input class="fi" id="f-rel" placeholder="比如：我的外婆、我最好的朋友…">
+      </div>
+      <div class="fg">
+        <label class="form-label">TA 是个怎样的人</label>
+        <textarea class="ft" id="f-pers" placeholder="比如：话不多但很温柔，喜欢喝茶，总爱叫我的小名，做得一手好饭…"></textarea>
+        <p class="hint">越具体越好，这决定了TA说话的方式</p>
+      </div>
+      <div class="fg">
+        <label class="form-label">TA 说话的口头禅或习惯</label>
+        <textarea class="ft" id="f-speech" placeholder="比如：总说"没事的，有我在"，喜欢用方言，结尾常说"你说是不是"…"></textarea>
+      </div>
+      <div class="fg">
+        <label class="form-label">关于TA的一段重要记忆</label>
+        <textarea class="ft" id="f-mem" placeholder="比如：每次我考试回家，TA都在门口等，从不问分数，只说"饿了吧，先吃饭"…"></textarea>
+        <p class="hint">这段记忆会刻进TA的心里，让对话更有温度</p>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:6px">
+        <button type="button" class="btn-g" style="flex:1" id="btn-create-cancel">取消</button>
+        <button type="submit" class="btn-p" style="flex:2">创建灵魂</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 聊天页 -->
+<div id="s-chat" class="screen" style="padding:0;justify-content:flex-start;">
+  <div class="chat-hd">
+    <div class="av" id="c-av">灵</div>
+    <div class="av-info">
+      <h3 id="c-name">—</h3>
+      <p><span class="sdot2"></span><span id="c-rel">数字灵魂</span></p>
+    </div>
+    <button class="btn-back" id="btn-chat-back">✕</button>
+  </div>
+  <div class="msgs" id="msgs"></div>
+  <div class="chat-input-area">
+    <textarea class="ci2" id="ci" placeholder="对TA说点什么…" rows="1"></textarea>
+    <button class="btn-send" id="btn-send">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="ov"><div class="spin"></div><p id="ov-txt">正在召唤灵魂…</p></div>
+<div class="toast" id="toast"></div>
+<audio id="ap"></audio>
+
+<script src="/app.js"></script>
+</body>
+</html>

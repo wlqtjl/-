@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wozai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: wozai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wozai"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${LISTEN_PORT:-8080}:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://wozai:${POSTGRES_PASSWORD:-changeme}@db:5432/wozai?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}"
+      DEEPSEEK_URL: "${DEEPSEEK_URL:-https://api.deepseek.com/v1/chat/completions}"
+      SILICONFLOW_API_KEY: "${SILICONFLOW_API_KEY}"
+      SILICONFLOW_URL: "${SILICONFLOW_URL:-https://api.siliconflow.cn/v1/audio/speech}"
+      ACCESS_TOKEN_TTL: "${ACCESS_TOKEN_TTL:-15}"
+      REFRESH_TOKEN_TTL: "${REFRESH_TOKEN_TTL:-168}"
+
+volumes:
+  pgdata:

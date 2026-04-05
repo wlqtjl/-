@@ -1,0 +1,27 @@
+[Unit]
+Description=WoZai Digital Soul Platform
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=wozai
+Group=wozai
+WorkingDirectory=/opt/wozai
+EnvironmentFile=/opt/wozai/.env
+ExecStart=/usr/local/bin/wozai
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+TimeoutStopSec=15
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/wozai
+PrivateTmp=true
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target
