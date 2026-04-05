@@ -14,6 +14,7 @@
 #   - 自动检测环境和内存
 #   - 自动生成安全密钥
 #   - 自动健康检查
+#   - 国内 VPS 自动使用 GitHub 镜像加速克隆
 #
 set -euo pipefail
 
@@ -48,12 +49,82 @@ if [[ "$TOTAL_MEM_MB" -lt 400 ]]; then
   warn "将建议使用裸机部署模式"
 fi
 
+# ===== 网络连接超时 =====
+CONNECT_TIMEOUT=5
+
 # ===== 检查是否在项目目录中 =====
 check_project_files() {
   if [[ -f "${PROJECT_DIR}/docker-compose.lowmem.yml" ]] && [[ -f "${PROJECT_DIR}/Dockerfile" ]]; then
     return 0
   fi
   return 1
+}
+
+# ===== 克隆项目代码（带重试和镜像回退）=====
+clone_repo() {
+  local target_dir="${1:-wozai}"
+  local repo_url="https://github.com/wlqtjl/-"
+
+  # 确保 git 已安装
+  if ! command -v git &>/dev/null; then
+    info "安装 git..."
+    if command -v apt-get &>/dev/null; then
+      apt-get update -qq && apt-get install -y -qq git >/dev/null 2>&1
+    elif command -v dnf &>/dev/null; then
+      dnf install -y -q git >/dev/null 2>&1
+    elif command -v yum &>/dev/null; then
+      yum install -y -q git >/dev/null 2>&1
+    fi
+  fi
+
+  if [[ -d "$target_dir" ]] && [[ -f "$target_dir/Dockerfile" ]]; then
+    info "项目目录已存在: $target_dir"
+    return 0
+  fi
+
+  # 清理可能存在的残留目录（上次克隆失败遗留的）
+  if [[ -d "$target_dir" ]]; then
+    warn "检测到残留目录 $target_dir（上次克隆可能失败），正在清理..."
+    rm -rf "$target_dir"
+  fi
+
+  # 尝试直接克隆 (GitHub)
+  info "正在从 GitHub 克隆项目..."
+  if git clone --depth 1 "$repo_url" "$target_dir" 2>&1; then
+    log "克隆成功"
+    return 0
+  fi
+
+  warn "直接克隆 GitHub 失败（国内 VPS 常见），尝试镜像加速..."
+  rm -rf "$target_dir" 2>/dev/null || true
+
+  # 定义镜像列表
+  local mirrors=(
+    "https://ghfast.top/${repo_url}"
+    "https://github.moeyy.xyz/${repo_url}"
+    "https://ghproxy.net/${repo_url}"
+  )
+
+  for mirror in "${mirrors[@]}"; do
+    local mirror_name
+    mirror_name=$(echo "$mirror" | sed 's|https://\([^/]*\)/.*|\1|')
+    info "尝试镜像: ${mirror_name}..."
+    if git clone --depth 1 "$mirror" "$target_dir" 2>&1; then
+      log "通过 ${mirror_name} 克隆成功"
+      # 将 remote 改回原始 GitHub 地址（便于后续 git pull）
+      cd "$target_dir"
+      git remote set-url origin "$repo_url" 2>/dev/null || true
+      cd - >/dev/null
+      return 0
+    fi
+    rm -rf "$target_dir" 2>/dev/null || true
+  done
+
+  err "所有克隆方式均失败。请手动克隆：
+  git clone ${repo_url} ${target_dir}
+  或使用镜像：
+  git clone https://ghfast.top/${repo_url} ${target_dir}
+  然后执行: cd ${target_dir} && sudo bash deploy.sh"
 }
 
 # ===== 生成随机密钥 =====
@@ -98,14 +169,14 @@ install_docker() {
 
     # 检测 download.docker.com 是否可达（国内 VPS 常被墙）
     local DOCKER_MIRROR=""
-    if curl -fsSL --connect-timeout 5 https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
+    if curl -fsSL --connect-timeout "$CONNECT_TIMEOUT" https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
       DOCKER_MIRROR="https://download.docker.com/linux/centos"
     else
       warn "download.docker.com 不可达，尝试国内镜像..."
-      if curl -fsSL --connect-timeout 5 https://mirrors.aliyun.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
+      if curl -fsSL --connect-timeout "$CONNECT_TIMEOUT" https://mirrors.aliyun.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
         DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/centos"
         info "使用阿里云镜像"
-      elif curl -fsSL --connect-timeout 5 https://mirrors.cloud.tencent.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
+      elif curl -fsSL --connect-timeout "$CONNECT_TIMEOUT" https://mirrors.cloud.tencent.com/docker-ce/linux/centos/gpg >/dev/null 2>&1; then
         DOCKER_MIRROR="https://mirrors.cloud.tencent.com/docker-ce/linux/centos"
         info "使用腾讯云镜像"
       else
@@ -223,7 +294,7 @@ deploy_docker() {
   if [[ ! -f /etc/docker/daemon.json ]]; then
     mkdir -p /etc/docker
     # 检测是否为国内网络环境（Docker Hub 不可达则判定为国内）
-    if ! curl -fsSL --connect-timeout 3 https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
+    if ! curl -fsSL --connect-timeout "$CONNECT_TIMEOUT" https://download.docker.com/linux/centos/gpg >/dev/null 2>&1; then
       info "检测到国内网络，已配置 Docker 镜像加速"
       cat > /etc/docker/daemon.json <<'DJSON'
 {
@@ -503,7 +574,11 @@ case "${1:-}" in
   uninstall) uninstall ;;
   *)
     if ! check_project_files; then
-      err "未检测到项目文件，请在项目目录中运行此脚本"
+      warn "未检测到项目文件，将自动克隆代码..."
+      clone_repo "wozai"
+      PROJECT_DIR="$(cd wozai && pwd)"
+      cd "$PROJECT_DIR"
+      info "已切换到项目目录: ${PROJECT_DIR}"
     fi
     show_menu
     ;;
@@ -518,7 +593,11 @@ echo ""
 echo "  下一步操作:"
 echo ""
 echo "  1. 编辑 .env 填入 API 密钥:"
-echo "     nano ${PROJECT_DIR}/.env"
+if command -v nano &>/dev/null; then
+  echo "     nano ${PROJECT_DIR}/.env"
+else
+  echo "     vi ${PROJECT_DIR}/.env"
+fi
 echo ""
 echo "  2. 重启服务使配置生效:"
 if command -v docker &>/dev/null && docker compose -f "${PROJECT_DIR}/docker-compose.lowmem.yml" ps &>/dev/null 2>&1; then
